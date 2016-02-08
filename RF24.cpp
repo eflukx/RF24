@@ -771,15 +771,20 @@ void RF24::powerUp(void)
 
 /******************************************************************/
 #if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-void RF24::errNotify(){
-	#if defined (SERIAL_DEBUG) || defined (RF24_LINUX)
-	  printf_P(PSTR("RF24 HARDWARE FAIL: Radio not responding, verify pin connections, wiring, etc.\r\n"));
+void RF24::errNotify(int line){
+  #if defined (SERIAL_DEBUG) || defined (RF24_LINUX)
+	  printf_P(PSTR("RF24 (HARDWARE?) FAIL: Radio not responding, verify pin connections, wiring, etc."));
+    line ? printf_P(" (in line: %d)\r\n", line) : printf_P("\r\n");
 	#endif
+  
 	#if defined (FAILURE_HANDLING)
-	failureDetected = 1;
+    failureDetected = 1;
 	#else
-	delay(5000);
+    delay(5000);
 	#endif
+}
+void RF24::errNotify(void){
+  errNotify(false);
 }
 #endif
 /******************************************************************/
@@ -797,8 +802,10 @@ bool RF24::write( const void* buf, uint8_t len, const bool multicast )
 	
 	while( ! ( get_status()  & ( _BV(TX_DS) | _BV(MAX_RT) ))) { 
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
-			if(millis() - timer > 85){			
-				errNotify();
+			if(millis() - timer > 85){	
+
+        print_status(get_status());
+				errNotify(__LINE__);
 				#if defined (FAILURE_HANDLING)
 				  return 0;		
 				#else
@@ -844,7 +851,7 @@ bool RF24::writeBlocking( const void* buf, uint8_t len, uint32_t timeout )
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
 			if(millis() - timer > (timeout+85) ){			
-				errNotify();
+				errNotify(__LINE__);
 				#if defined (FAILURE_HANDLING)
 				return 0;			
                 #endif				
@@ -891,7 +898,7 @@ bool RF24::writeFast( const void* buf, uint8_t len, const bool multicast )
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
 			if(millis() - timer > 85 ){			
-				errNotify();
+				errNotify(__LINE__);
 				#if defined (FAILURE_HANDLING)
 				return 0;							
 				#endif
@@ -965,7 +972,7 @@ bool RF24::txStandBy(){
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
 			if( millis() - timeout > 85){
-				errNotify();
+				errNotify(__LINE__);
 				#if defined (FAILURE_HANDLING)
 				return 0;	
 				#endif
@@ -998,7 +1005,7 @@ bool RF24::txStandBy(uint32_t timeout, bool startTx){
 		}
 		#if defined (FAILURE_HANDLING) || defined (RF24_LINUX)
 			if( millis() - start > (timeout+85)){
-				errNotify();
+				errNotify(__LINE__);
 				#if defined (FAILURE_HANDLING)
 				return 0;	
 				#endif
